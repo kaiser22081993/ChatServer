@@ -22,21 +22,33 @@ public class ChatClient {
         }
 
         public static final int PORT = 3333;
-        private static String serverAddres = "192.168.56.1";
+        private static String serverAddres = "localhost";
         private static Socket socket;
-        private static PrintStream out;
+        private static OutputStream out;
 
 
         public ClientAccess() {
             try {
                 socket = new Socket(serverAddres,PORT);
-                out = new PrintStream(socket.getOutputStream());
-                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-                String line;
-                while ((line = reader.readLine())!= null){
-                    notifyObservers(line);
-                }
+                out = socket.getOutputStream();
+
+                Thread receivingThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                            String line;
+                            while ((line = reader.readLine())!= null){
+                                notifyObservers(line);
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                receivingThread.start();
+
 
             } catch (IOException e) {
                 notifyObservers(e);
@@ -46,10 +58,13 @@ public class ChatClient {
         public void send(String message){
             // Отправляем сообщение
             try{
-                out.println(message);
+                out.write(message.getBytes());
                 out.flush();
             }catch (RuntimeException e){
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+            System.out.println("sended " + message);
         }
         public void close(){
             try {
@@ -115,8 +130,9 @@ public class ChatClient {
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    textArea.append(message);
+                    textArea.append(message+";");
                     textArea.append("\n");
+
                 }
             });
 

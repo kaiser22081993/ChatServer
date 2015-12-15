@@ -24,20 +24,23 @@ public class ChatServer {
 
         try {
             serverSocket = new ServerSocket(port);
-            client = serverSocket.accept();
-            int clientsCount = maxClientsCount;
+            while (true){
+                client = serverSocket.accept();
+                System.out.println(client.hashCode());
+                int clientsCount = maxClientsCount;
+                for(int i = 0;i < clientsCount; i++){
+                    if (threads[i] == null)
+                        (threads[i] = new ClientThread(threads,client)).start();
 
-//            PrintStream out = new PrintStream(client.getOutputStream());
-            for(int i = 0;i < clientsCount; i++){
-                if (threads[i] == null)
-                (threads[i] = new ClientThread(threads,client)).start();
-
+                }
             }
+
 
 
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println("finish");
 
 
     }
