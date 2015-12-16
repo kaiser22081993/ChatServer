@@ -9,54 +9,59 @@ import java.net.Socket;
 public class ClientThread extends Thread {
 
     private  ClientThread[] threads;
-    private  Socket clientSocket;
-    private PrintStream out;
-    private DataInputStream in;
-    private int maxClientCount;
-    private String clientName;
+    private  Socket clientSocket = null;
+    private PrintStream os = null;
+    private DataInputStream is = null;
+    private int maxClientsCount;
+    private String clientName = null;
+    public static final String CRLF = "\r\n";
 
-    public ClientThread(ClientThread[] clientThreads, Socket clientSocket) {
-        this.threads = clientThreads;
+    public ClientThread(Socket clientSocket, ClientThread[] clientThreads) {
+
         this.clientSocket = clientSocket;
-        maxClientCount = clientThreads.length;
+        this.threads = clientThreads;
+        maxClientsCount = clientThreads.length;
     }
 
     @Override
     public void run() {
+        int maxClientsCount = this.maxClientsCount;
+        ClientThread[] threads = this.threads;
         try {
-            out = new PrintStream(clientSocket.getOutputStream());
-            in = new DataInputStream(clientSocket.getInputStream());
-            //Считываем имя клиента из in
+            os = new PrintStream(clientSocket.getOutputStream());
+            is = new DataInputStream(clientSocket.getInputStream());
+            //Считываем имя клиента из is
             String name;
             while (true){
-                out.println("Enter your name!");
-                name = in.readLine().trim();
+                os.println("Enter your name!" + CRLF);
+                name = is.readLine().trim();
                 System.out.println(name);
-                if(name != null&&name.indexOf("@") == -1){
+                if(name!=null && name.indexOf("@") == -1){
                     break;
                 }
                 else {
-                    out.println("The name must not contain character @");
+                    os.println("The name must not contain character @");
                 }
             }
+            os.println("Welcome: <" + name + "> !!!");
             //Инициализируем имя клиента в синхронизированном блоке
             synchronized (this){
-                for(int i = 0; i < maxClientCount; i++){
+                for(int i = 0; i < maxClientsCount; i++){
                     if(threads[i] != null && threads[i] == this){
-                        threads[i].clientName = name;
+                        threads[i].clientName = "@" + name;
                     }
                 }
             }
-            for(int i = 0; i < maxClientCount; i++){
+            for(int i = 0; i < maxClientsCount; i++){
                 if(threads[i] != null && threads[i] != this){
-                    threads[i].out.println(clientName + " connected to conversation");
+                    threads[i].os.println(clientName + " connected to conversation");
                 }
             }
 
             String message;
             //диалог...
             while (true){
-                message = in.readLine().trim();
+                message = is.readLine().trim();
                 if(message.equals("/exit"))break;
                 String splitedMessage[] = message.split(" ",2);
                 if(message!=null && message.startsWith("@") && splitedMessage.length == 2){
@@ -65,21 +70,21 @@ public class ClientThread extends Thread {
                     String senderName = splitedMessage[0];
 
                     synchronized (this){
-                        for(int i = 0; i < maxClientCount; i++){
-                            if(threads[i] != null && threads[i] != this
+                        for(int i = 0; i < maxClientsCount; i++){
+                            if(threads[i] != null
                             && threads[i].clientName != null
                             && threads[i].clientName.equals(senderName))
                             {
-                                threads[i].out.println("private:<" + clientName + ">" +messageWithoutName);
+                                threads[i].os.println("private:<" + clientName + ">" + messageWithoutName);
                             }
                         }
                     }
                 }
                 else {
                     synchronized (this){
-                        for(int i = 0; i < maxClientCount; i++){
-                            if(threads[i] != null && threads[i] != this){
-                                threads[i].out.println("<" + clientName + ">" + message.trim());
+                        for(int i = 0; i < maxClientsCount; i++){
+                            if(threads[i] != null ){
+                                threads[i].os.println("<" + clientName + ">" + message.trim());
                             }
                         }
                     }
@@ -88,9 +93,9 @@ public class ClientThread extends Thread {
 
             //Оповещаем всех о выходе участника чата
             synchronized (this){
-                for(int i = 0; i < maxClientCount; i++){
+                for(int i = 0; i < maxClientsCount; i++){
                     if(threads[i] != null && threads[i] !=this){
-                        threads[i].out.println(clientName + " has left the conversation!");
+                        threads[i].os.println(clientName + " has left the conversation!");
                     }
                 }
             }
@@ -101,9 +106,9 @@ public class ClientThread extends Thread {
             e.printStackTrace();
         }finally {
             try {
-                this.out.close();
+                this.os.close();
                 this.clientSocket.close();
-                this.in.close();
+                this.is.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }

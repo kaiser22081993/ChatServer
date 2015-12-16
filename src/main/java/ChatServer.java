@@ -1,5 +1,5 @@
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
+import alt.clientThread1;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.ServerSocket;
@@ -10,7 +10,7 @@ import java.net.Socket;
  */
 public class ChatServer {
 
-    private static final int port = 3333;
+    private static final int port = 2222;
     private static Socket client;
     private static ServerSocket serverSocket;
 
@@ -29,14 +29,13 @@ public class ChatServer {
                 System.out.println(client.hashCode());
                 int clientsCount = maxClientsCount;
                 for(int i = 0;i < clientsCount; i++){
-                    if (threads[i] == null)
-                        (threads[i] = new ClientThread(threads,client)).start();
-
+                    if (threads[i] == null){
+                        (threads[i] = new ClientThread(client,threads)).start();
+                        break;
+                    }
                 }
+                System.out.println("connected");
             }
-
-
-
         } catch (IOException e) {
             e.printStackTrace();
         }

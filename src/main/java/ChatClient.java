@@ -21,15 +21,15 @@ public class ChatClient {
             super.notifyObservers(arg);
         }
 
-        public static final int PORT = 3333;
+        public static final int PORT = 2222;
         private static String serverAddres = "localhost";
         private static Socket socket;
         private static OutputStream out;
 
 
-        public ClientAccess() {
+        public ClientAccess(String server, int port) {
             try {
-                socket = new Socket(serverAddres,PORT);
+                socket = new Socket(server,port);
 
                 out = socket.getOutputStream();
 
@@ -55,14 +55,17 @@ public class ChatClient {
             }
         }
 
+        private static final String CRLF = "\r\n";
+
         public void send(String message){
             // Отправляем сообщение
             try{
-                out.write(message.getBytes());
+                out.write((message+CRLF).getBytes());
                 out.flush();
+
             }catch (RuntimeException e){
             } catch (IOException e) {
-                e.printStackTrace();
+                notifyObservers(e);
             }
             System.out.println("sended " + message);
         }
@@ -83,7 +86,9 @@ public class ChatClient {
 
         public ChatFrame(ClientAccess access) throws HeadlessException {
             this.access = access;
+            access.addObserver(this);
             buildFrame();
+
         }
         private void buildFrame(){
             textArea = new JTextArea(20,50);
@@ -124,25 +129,24 @@ public class ChatClient {
 
         }
 
-        @Override
-        public void update(Observable o, Object arg) {
-            final String message = (String) arg;
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    textArea.append(message+";");
-                    textArea.append("\n");
 
+        public void update(Observable o, Object arg) {
+            final Object finalArg = arg;
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    textArea.append(finalArg.toString());
+                    textArea.append("\n");
                 }
             });
+            System.out.println("updated " + arg.toString());
 
         }
     }
 
     public static void main(String[] args) {
-        ClientAccess access = new ClientAccess();
+        ClientAccess access = new ClientAccess(ClientAccess.serverAddres,ClientAccess.PORT);
         JFrame frame = new ChatFrame(access);
-        frame.setTitle("MyChatApp");
+        frame.setTitle("MyChatApp connected to " + ClientAccess.PORT);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
         frame.setLocationRelativeTo(null);
