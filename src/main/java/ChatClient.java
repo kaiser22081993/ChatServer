@@ -1,4 +1,8 @@
 import javax.swing.*;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -22,7 +26,7 @@ public class ChatClient {
         }
 
         public static final int PORT = 2222;
-        private static String serverAddres = "localhost";
+        private static String serverAddres = "91.197.18.251";
         private static Socket socket;
         private static OutputStream out;
 
@@ -79,7 +83,7 @@ public class ChatClient {
     }
     //GUI клиента для Desktop
     static class ChatFrame extends JFrame implements Observer {
-        private JTextArea textArea;
+        private JTextPane textPane;
         private JTextField textField;
         private ClientAccess access;
         private JButton sendButton;
@@ -91,10 +95,11 @@ public class ChatClient {
 
         }
         private void buildFrame(){
-            textArea = new JTextArea(20,50);
-            textArea.setEditable(false);
-            textArea.setLineWrap(true);
-            add(new JScrollPane(textArea),BorderLayout.CENTER);
+            textPane = new JTextPane();
+            textPane.setEditable(false);
+
+         //   textPane.setLineWrap(true);
+            add(new JScrollPane(textPane), BorderLayout.CENTER);
 
             Box box = Box.createHorizontalBox();
             add(box,BorderLayout.SOUTH);
@@ -132,23 +137,43 @@ public class ChatClient {
 
         public void update(Observable o, Object arg) {
             final Object finalArg = arg;
+            final String line = arg.toString();
+
+
             SwingUtilities.invokeLater(new Runnable() {
                 public void run() {
-                    textArea.append(finalArg.toString());
-                    textArea.append("\n");
+                    Color color = (line.contains("private"))?Color.magenta:Color.BLACK;
+                    appendToPane(textPane, finalArg.toString(), color);
+                    appendToPane(textPane, "\n", color);
                 }
             });
             System.out.println("updated " + arg.toString());
 
+        }
+        private void appendToPane(JTextPane tp, String msg, Color c)
+        {
+            tp.setEditable(true);
+            StyleContext sc = StyleContext.getDefaultStyleContext();
+            AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, c);
+
+            aset = sc.addAttribute(aset, StyleConstants.FontFamily, "Lucida Console");
+            aset = sc.addAttribute(aset, StyleConstants.Alignment, StyleConstants.ALIGN_JUSTIFIED);
+
+            int len = tp.getDocument().getLength();
+
+            tp.setCharacterAttributes(aset, false);
+            tp.replaceSelection(msg);
+            tp.setEditable(false);
         }
     }
 
     public static void main(String[] args) {
         ClientAccess access = new ClientAccess(ClientAccess.serverAddres,ClientAccess.PORT);
         JFrame frame = new ChatFrame(access);
+
         frame.setTitle("MyChatApp connected to " + ClientAccess.PORT);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
+        frame.setSize(400, 350);
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
         frame.setVisible(true);

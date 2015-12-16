@@ -32,9 +32,14 @@ public class ClientThread extends Thread {
             is = new DataInputStream(clientSocket.getInputStream());
             //Считываем имя клиента из is
             String name;
+            os.println("Enter your name!" + CRLF);
+
+
+
             while (true){
-                os.println("Enter your name!" + CRLF);
+
                 name = is.readLine().trim();
+
                 System.out.println(name);
                 if(name!=null && name.indexOf("@") == -1){
                     break;
@@ -64,21 +69,40 @@ public class ClientThread extends Thread {
                 message = is.readLine().trim();
                 if(message.equals("/exit"))break;
                 String splitedMessage[] = message.split(" ",2);
+                //приватное сообщение
                 if(message!=null && message.startsWith("@") && splitedMessage.length == 2){
-
                     String messageWithoutName = splitedMessage[1];
                     String senderName = splitedMessage[0];
+                    boolean isNameExist = false;
 
+                    //проверяем существует ли юзер с указанным именем
                     synchronized (this){
-                        for(int i = 0; i < maxClientsCount; i++){
-                            if(threads[i] != null
-                            && threads[i].clientName != null
-                            && threads[i].clientName.equals(senderName))
-                            {
-                                threads[i].os.println("private:<" + clientName + ">" + messageWithoutName);
+                        for(int i = 0; i < maxClientsCount;i++){
+                            if(threads[i]!=null && threads[i].clientName!=null){
+                                isNameExist = threads[i].clientName.equals(senderName);
+                                if(isNameExist)
+                                break;
                             }
                         }
                     }
+                    //посылаем себе и указаному юзеру
+                    if(isNameExist){
+                        synchronized (this){
+                            for(int i = 0; i < maxClientsCount; i++){
+                                if(threads[i] != null
+                                        && threads[i].clientName != null
+                                        && (threads[i].clientName.equals(senderName)||threads[i] == this))
+                                {
+                                    threads[i].os.println("private:<" + clientName + ">" + messageWithoutName);
+                                }
+                            }
+                        }
+                    }
+                    //если такого юзера нет, сообщаем об этом
+                    else {
+                        this.os.println("Sorry but name: <"+senderName+"> doesn't exist!");
+                    }
+
                 }
                 else {
                     synchronized (this){
@@ -101,10 +125,11 @@ public class ClientThread extends Thread {
             }
 
 
-
         } catch (IOException e) {
             e.printStackTrace();
-        }finally {
+        }
+        //Освобождаем ресурсы
+        finally {
             try {
                 this.os.close();
                 this.clientSocket.close();
@@ -112,7 +137,6 @@ public class ClientThread extends Thread {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
 
     }
